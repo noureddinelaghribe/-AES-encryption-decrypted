@@ -70,7 +70,18 @@
             background: rgba(255, 255, 255, 0.9);
         }
 
-        textarea:focus {
+        input[type="password"], input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        input[type="password"]:focus, input[type="text"]:focus {
             outline: none;
             border-color: #667eea;
             box-shadow: 0 0 10px rgba(102, 126, 234, 0.3);
@@ -186,9 +197,15 @@
     <div class="container">
         <h1>🔒 AES Text Encryption</h1>
         
-        <div class="key-info">
-            <h3>Using Same Key as Kotlin Class</h3>
-            <div class="key-display">MyStrongSecretKey2024!@#$%^&*()_+ABCDEFGHIJKLMNOP</div>
+        <div class="section">
+            <h2>🔑 Enter Your Encryption Key</h2>
+            <input type="password" id="userKey" placeholder="Enter your secret key..." 
+                   value="MyStrongSecretKey2024!@#$%^&*()_+ABCDEFGHIJKLMNOP">
+            <div class="button-group" style="margin-top: 10px;">
+                <button class="decrypt-btn" style="background: linear-gradient(135deg, #FF9800, #F57C00); flex: 0 0 auto; min-width: 140px;" onclick="toggleKeyVisibility()">👁️ Show/Hide Key</button>
+                <button class="encrypt-btn" style="flex: 0 0 auto; min-width: 120px;" onclick="generateRandomKey()">🎲 Generate Key</button>
+            </div>
+            <div id="keyStatus" class="status" style="display: none;"></div>
         </div>
 
         <div class="section">
@@ -213,8 +230,15 @@
     </div>
 
     <script>
-        // Same strong key as in Kotlin class
-        const USER_KEY = "MyStrongSecretKey2024!@#$%^&*()_+ABCDEFGHIJKLMNOP";
+        // Get user's custom key
+        function getUserKey() {
+            const userKey = document.getElementById('userKey').value;
+            if (!userKey.trim()) {
+                showStatus('keyStatus', 'Please enter a key', 'error');
+                return null;
+            }
+            return userKey;
+        }
         
         // Convert user key to proper format (same as Kotlin SHA-256 hashing)
         function generateSecretKey(userKey) {
@@ -223,8 +247,14 @@
 
         function encryptText() {
             const inputText = document.getElementById('inputText').value;
+            const userKey = getUserKey();
+            
             if (!inputText.trim()) {
                 showStatus('inputStatus', 'Please enter text to encrypt', 'error');
+                return;
+            }
+            
+            if (!userKey) {
                 return;
             }
 
@@ -233,7 +263,7 @@
                 const iv = CryptoJS.lib.WordArray.random(16);
                 
                 // Get the secret key
-                const key = generateSecretKey(USER_KEY);
+                const key = generateSecretKey(userKey);
                 
                 // Encrypt using AES-CBC with PKCS7 padding (equivalent to PKCS5 in Java)
                 const encrypted = CryptoJS.AES.encrypt(inputText, key, {
@@ -257,8 +287,14 @@
 
         function decryptText() {
             const inputText = document.getElementById('inputText').value;
+            const userKey = getUserKey();
+            
             if (!inputText.trim()) {
                 showStatus('inputStatus', 'Please enter encrypted text to decrypt', 'error');
+                return;
+            }
+            
+            if (!userKey) {
                 return;
             }
 
@@ -271,7 +307,7 @@
                 const encryptedData = CryptoJS.lib.WordArray.create(combined.words.slice(4));
                 
                 // Get the secret key
-                const key = generateSecretKey(USER_KEY);
+                const key = generateSecretKey(userKey);
                 
                 // Decrypt
                 const decrypted = CryptoJS.AES.decrypt({
@@ -293,8 +329,29 @@
                 showStatus('outputStatus', 'Decryption completed', 'success');
                 
             } catch (error) {
-                showStatus('inputStatus', 'Decryption failed: Invalid encrypted text', 'error');
+                showStatus('inputStatus', 'Decryption failed: Invalid encrypted text or wrong key', 'error');
             }
+        }
+
+        function toggleKeyVisibility() {
+            const keyInput = document.getElementById('userKey');
+            if (keyInput.type === 'password') {
+                keyInput.type = 'text';
+                showStatus('keyStatus', 'Key is now visible', 'success');
+            } else {
+                keyInput.type = 'password';
+                showStatus('keyStatus', 'Key is now hidden', 'success');
+            }
+        }
+
+        function generateRandomKey() {
+            const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=[]{}|;:,.<>?';
+            let result = '';
+            for (let i = 0; i < 32; i++) {
+                result += characters.charAt(Math.floor(Math.random() * characters.length));
+            }
+            document.getElementById('userKey').value = result;
+            showStatus('keyStatus', 'New random key generated! 🎲', 'success');
         }
 
         function copyResult() {
@@ -325,6 +382,7 @@
             document.getElementById('outputText').value = '';
             document.getElementById('inputStatus').style.display = 'none';
             document.getElementById('outputStatus').style.display = 'none';
+            document.getElementById('keyStatus').style.display = 'none';
         }
 
         function showStatus(elementId, message, type) {
